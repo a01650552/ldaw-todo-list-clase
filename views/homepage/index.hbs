@@ -1,0 +1,150 @@
+<main role="main" class="container">
+  <div class="row">
+    <div class="col-12">
+      <h1>TODO List</h1>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-lg-12">
+      <form class="form-inline">
+        <div class="input-group w-100">
+          <input type="text" name="description" placeholder="I have to..." class="form-control" id="taskDescription">
+          <div class="input-group-append">
+            <input type="button" value="Add" class="btn btn-primary" onClick="saveTask();">
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-lg-12" id="tasksList">
+      {{#each tasks}}
+      <div class="card my-3 {{#eq status 'done' }}bg-light{{/eq}}" id="{{id}}">
+        <div class="card-body">
+          <p class="card-text">{{ description }}</p>
+          {{#eq status 'pending'}}
+          <form method="POST" action="/tasks/{{id}}/done">
+            <a href="javascript:;" class="card-link" onClick="doneTask({{id}})">Done</a>
+          </form>
+          {{/eq}}
+          <input type="button" value="Delete" class="btn btn-primary" onClick="deleteTask({{id}});">
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+</main>
+
+<script>
+  function saveTask() {
+    let description = document.getElementById('taskDescription').value;
+    let body = {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ description: description })
+    };
+    fetch('/tasks', body).then(response => {
+      if(response.ok) {
+        return response.json();
+      } else {
+        throw "Error en la llamada AJAX"
+      }
+    })
+    .then(task => {
+      document.getElementById('taskDescription').value= '';
+      addTask(task);
+    })
+    .catch(error => {
+      console.log('Error: ', error);
+    })
+  }
+
+  function addTask(task) {
+    let html = 
+    `
+    <div class="card my-3" id="${task.id}">
+        <div class="card-body">
+          <p class="card-text">${task.description}</p>
+          <form method="POST" action="/tasks/${task.id}/done">
+            <a href="javascript:;" class="card-link" onClick="doneTask(${task.id});">Done</a>
+          </form>
+          <input type="button" value="Delete" class="btn btn-primary" onClick="deleteTask(${task.id});">
+        </div>
+      </div>
+     `;
+
+    let node = document.createRange().createContextualFragment(html);
+    document.getElementById('tasksList').prepend(node);
+  }
+
+  function doneTask(id) {
+    let body = {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id: id })
+    };
+    fetch('/tasks/:id/done', body).then(response => {
+      if(response.ok) {
+        return response.json();
+      } else {
+        throw "Error en la llamada AJAX"
+      }
+    })
+    .then((task) => {
+      markDone(task);
+    })
+    .catch(error => {
+      console.log('Error: ', error);
+    })
+  }
+
+  function markDone(task){
+    let html = 
+    `
+        <div class="card-body">
+          <p class="card-text">${task.description}</p>
+          <input type="button" value="Delete" class="btn btn-primary" onClick="deleteTask(${task.id});">
+        </div>
+     `;
+
+     var card = document.getElementById(task.id);
+     card.classList.add("bg-light");
+     card.innerHTML = html;
+     
+  }
+
+  function deleteTask(id) {
+    let body = {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id: id })
+    };
+    fetch('/tasks/:id/delete', body).then(response => {
+      if(response.ok) {
+        return response.json();
+      } else {
+        throw "Error en la llamada AJAX"
+      }
+    })
+    .then((taskId) => {
+      deleteCard(taskId);
+    })
+    .catch(error => {
+      console.log('Error: ', error);
+    })
+  }
+
+  function deleteCard(taskId) {
+    document.getElementById(taskId).remove();
+  }
+
+</script>
